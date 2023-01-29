@@ -63,10 +63,31 @@ class LinkDAO
         $link = new Link();
         $link->id = $data["id"];
         $link->source = $data["source_uuid"];
+        $link->source_uuid = $data["projecttasks_id_source"];
         $link->target = $data["target_uuid"];
+        $link->target_uuid = $data["projecttasks_id_target"];
         $link->type = $data["type"];
         $link->lag = $data["lag"];
         $link->lead = $data["lead"];
         return $link;
     }
+
+    public function getFromDBForItemIDsRecursive($projecttaskId)
+    {
+        global $DB;
+
+        $iterator = $DB->request('
+            WITH RECURSIVE links as (
+                SELECT * FROM glpi_projecttasklinks WHERE projecttasks_id_source = ' . $projecttaskId .'
+                union
+                select l.*
+                from glpi_projecttasklinks as l, links AS a
+                where l.projecttasks_id_target = a.projecttasks_id_target or l.projecttasks_id_source = a.projecttasks_id_target
+                )
+                select * from links;
+        ');
+
+        return $iterator;
+    }
+
 }

@@ -52,6 +52,7 @@ var GlpiGantt = (function() {
     gantt.i18n.setLocale(CFG_GLPI.language.substr(0, 2));
 
     var formatFunc = gantt.date.date_to_str(parseDateFormat);
+    var formatFuncStrToDate = gantt.date.str_to_date("%Y-%m-%d %H:%i:s");
 
     return {
         init: function($ID) {
@@ -147,10 +148,10 @@ var GlpiGantt = (function() {
 
             gantt.templates.tooltip_text = function(start, end, task) {
                 var text = "<b><span class=\"capitalize\">" +
-               task.type + ":</span></b> " + task.text + "<br/><b>" + __("Start date:", 'gantt') + "</b> " +
-               gantt.templates.tooltip_date_format(start) +
-               "<br/><b>" + __("End date:", 'gantt') + "</b> " + gantt.templates.tooltip_date_format(end) +
-               "<br/><b>" + __("Progress:", 'gantt') + "</b> " + parseInt(task.progress * 100) + "%";
+                    task.type + ":</span></b> " + task.text + "<br/><b>" + __("Start date:", 'gantt') + "</b> " +
+                    gantt.templates.tooltip_date_format(start) +
+                    "<br/><b>" + __("End date:", 'gantt') + "</b> " + gantt.templates.tooltip_date_format(end) +
+                    "<br/><b>" + __("Progress:", 'gantt') + "</b> " + parseInt(task.progress * 100) + "%";
                 if (task.content && task.content.length > 0) {
                     text += "<br/><b>" + __("Description:", 'gantt') + "</b><div style=\"padding-left:25px\">" + task.content + "</div>";
                 }
@@ -287,7 +288,7 @@ var GlpiGantt = (function() {
             });
 
             if (!readonly) {
-            // catch task drag event to update db
+                // catch task drag event to update db
                 gantt.attachEvent("onAfterTaskDrag", function(id) {
                     var task = gantt.getTask(id);
                     var progress = (Math.round(task.progress * 100 / 5) * 5) / 100; // prevent server side exception for wrong stepping
@@ -441,7 +442,7 @@ var GlpiGantt = (function() {
                         updateTaskLink(link, endPopup);
                     }
                 })();
-            // <<<<< link double click
+                // <<<<< link double click
             }
 
             // adjust elements visibility on Fullscreen expand/collapse
@@ -674,6 +675,14 @@ var GlpiGantt = (function() {
             success: function(json) {
                 if (json.ok) {
                     task.progress = progress;
+                    console.log(json.related);
+                    json.related.forEach((rel) => {
+                        var relTask = gantt.getTask(rel.uuid);
+                        console.log(relTask);
+                        relTask.start_date = formatFuncStrToDate(rel.plan_start_date);
+                        relTask.end_date = formatFuncStrToDate(rel.plan_end_date);
+                        gantt.refreshTask(rel.uuid);
+                    });
                     gantt.updateTask(task.id);
                     displayAjaxMessageAfterRedirect();
                 } else {

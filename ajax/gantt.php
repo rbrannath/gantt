@@ -87,8 +87,10 @@ if (isset($_REQUEST['getData'])) {
         $item->populateFrom($task);
         $taskDAO = new \GlpiPlugin\Gantt\TaskDAO();
         $updated = $taskDAO->updateTask($item);
+        $updatedRelated = $taskDAO->updateRelatedTasks($item);
         $result = [
-            'ok' => $updated
+            'ok' => $updated,
+            'related' => $updatedRelated
         ];
     } catch (\Exception $ex) {
         $result = [

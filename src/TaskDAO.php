@@ -88,6 +88,46 @@ class TaskDAO
         return true;
     }
 
+    public function updateRelatedTasks($task) {
+        $taskLink = new LinkDAO();
+        $iterator = $taskLink->getFromDBForItemIDsRecursive($task->id);
+        $relatedTasks = [];
+
+        foreach ($iterator as $nextLink) {
+            if ($nextLink['type'] == 0) {
+                    $prevTask = new \ProjectTask();
+                    $prevTask->getFromDB($nextLink['projecttasks_id_source']);
+                    $nextTask = new \ProjectTask();
+                    $nextTask->getFromDB($nextLink['projecttasks_id_target']);
+
+            } elseif ($nextLink['type'] == 1) {
+                    $prevTask = new \ProjectTask();
+                    $prevTask->getFromDB($nextLink['projecttasks_id_target']);
+                    $nextTask = new \ProjectTask();
+                    $nextTask->getFromDB($nextLink['projecttasks_id_source']);
+            }
+            $nextTask->fields['plan_start_date'] = $this->calculateStartDate($prevTask->fields['plan_end_date'], $nextLink);
+            $nextTask->fields['plan_end_date'] = $this->calculateEndDate($nextTask->fields['plan_start_date'], $nextTask);
+
+            $relatedTasks[] = $nextTask->fields;
+            $nextTask->update($nextTask->fields);
+        }
+        return $relatedTasks;
+    }
+
+    public function calculateStartDate($start_date, $taskLink) {
+        $new_start_date = \DateTime::createFromFormat('Y-m-d H:i:s', $start_date);
+        $new_start_date->modify("+{$taskLink['lag']} days");
+        $new_start_date->modify("-{$taskLink['lead']} days");
+        return $new_start_date->format('Y-m-d H:i:s');
+    }
+
+    public function calculateEndDate($start_date, $task) {
+        $new_end_date = \DateTime::createFromFormat('Y-m-d H:i:s',$start_date);
+        $new_end_date->modify("+{$task->fields['planned_duration']} minutes");
+        return $new_end_date->format('Y-m-d H:i:s');
+    }
+
     public function updateParent($task)
     {
         $t = new \ProjectTask();
